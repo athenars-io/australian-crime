@@ -1,3 +1,9 @@
+# Data files
+/data
+
+# Background literature on crime in Australia
+/literature
+
 # History files
 .Rhistory
 .Rapp.history
