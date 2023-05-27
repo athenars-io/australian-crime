@@ -4,6 +4,9 @@
 # Background literature on crime in Australia
 /literature
 
+# Fluff
+.DS_Store
+
 # History files
 .Rhistory
 .Rapp.history
