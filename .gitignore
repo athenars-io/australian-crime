@@ -1,6 +1,9 @@
 # Rproj
 auscrime.Rproj
 
+# Output files
+/outputs
+
 # Data files
 /data
 

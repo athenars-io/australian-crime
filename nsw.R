@@ -1,5 +1,6 @@
 # This R file takes in nsw crime data and cleans and tidies it.
 # It saves the cleaned and tidied data to a csv file.
+# This R code primarily uses the Polars dataframe library for the wrangling.
 # The intent is that it is then combined with like prepared data
 # from the other States of Australia.
 
@@ -30,20 +31,28 @@ library(polars)
 
 data <- read_csv("data/nsw/NSW_SuburbData2022.csv")
 
+# df = pl$read_csv("data/nsw/NSW_SuburbData2022.csv")#$
+  # with_column(pl$lit(0)$alias("Day"))
+
+# head(df)
+
 # Add a dummy day variable
 
 data$Day <- "01"
 
-# tidy data
+# tidy data, using tidyr
+
+# df_test <- df$head(20)
+# df_test
 
 tidy_data = data %>%
   select(-'Offence category') %>%
   pivot_longer('Jan 1995':'Dec 2022', names_to = "period", values_to = "count") %>%
   pivot_wider(names_from = Subcategory, values_from = count)
 
-# Testing Polars
+# Saving lists of crime categories, to sum later
 
-homicide_list <- pl$series(c('Murder *', 'Attempted murder', 'Murder accessory, conspiracy', 'Manslaughter *'))
+homicide_list <- list(c('Murder *', 'Attempted murder', 'Murder accessory, conspiracy', 'Manslaughter *'))
 
 assault_list <- list(c('Domestic violence related assault', 'Non-domestic violence related assault', 'Assault Police'))
 
@@ -72,14 +81,15 @@ other_list <- list(c('Abduction and kidnapping', 'Arson', 'Prohibited and regula
                  'Betting and gaming offences', 'Liquor offences', 'Pornography offences', 'Prostitution offences',
                  'Transport regulatory offences', 'Other offences'))
 
-pl_big <- pl$DataFrame(tidy_data)$
+# Parsing, cleaning and wrangling of the data using polars
+
+pl_test <- pl$DataFrame(tidy_data)$
   # fill_null(0)$fill_nan(0)$
   with_columns(pl$col("period")$str$splitn(" ", 2)$alias("dtemp"))$
   with_columns(pl$col("dtemp")$struct$rename_fields(c("Month", "Year")))$unnest("dtemp")$
   with_columns((pl$col("Day") + pl$col("period"))$alias("Date"))$
-  with_columns(pl$col("*")$exclude(c("Suburb", "Day", "period", "Date", "Month", "Year"))$cast(pl$Int32))$
-  with_columns(pl$col("Date")$str$strptime(pl$Date, "%d%b %Y"))$
-  with_columns(pl$sum(homicide_list)$alias("c_homicide"),
+  with_columns(pl$col("Date")$str$strptime(pl$Date, "%d%b %Y"),
+               pl$sum(homicide_list)$alias("c_homicide"),
                pl$sum(assault_list)$alias("c_assault"),
                pl$sum(robbery_list)$alias("c_robbery"),
                pl$sum(theft_list)$alias("c_theft"),
@@ -87,15 +97,26 @@ pl_big <- pl$DataFrame(tidy_data)$
                pl$sum(drugs_list)$alias("c_drugs"),
                pl$sum(disorderly_list)$alias("c_disorderly"),
                pl$sum(justice_list)$alias("c_justice"),
-               pl$sum(other_list)$alias("c_other")
-  )
+               pl$sum(other_list)$alias("c_other"))$
+  with_columns(pl$col("*")$exclude(c("Suburb", "Day", "period", "Date", "Month", "Year"))$cast(pl$Int32)
+  )$
+  select(pl$col(c("Date", "Month", "Year", "Suburb")), 
+         pl$all()$exclude(c("Date", "Month", "Year", "Suburb", "period", "Day")))
 
-  pl_big#$groupby("Suburb")$pl$col("*")$sum()$alias("tott")
-  dim(pl_big)
-  pl_big$select("Suburb", "Date", "Murder *", "c_theft", "c_homicide")$tail(20)
+# Finish by writing the file out to disk as csv
+
+write.csv(pl_test, "outputs/nsw_test.csv")
+
+
+
+
+
+
+#===
+
+# Old dplyr code that didn't seem able to complete the task
 
 # df$with_columns((pl$col("a") * pl$col("b"))$alias("a * b"))
-
   #separate(period, into = c("Month", "Year"), sep = " ") %>%
   #mutate(ddate = paste(Year, Month, Day, sep = "-")) %>%
   #mutate(ddate = as.Date(ddate, "%Y-%b-%d")) %>%
