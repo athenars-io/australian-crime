@@ -10,7 +10,7 @@
 
 # Import and load libraries
 
-packages <- c("readr", "dplyr", "tidyr")
+packages <- c("readr", "tidyr")
 
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
@@ -34,16 +34,11 @@ data <- read_csv("data/nsw/NSW_SuburbData2022.csv")
 # df = pl$read_csv("data/nsw/NSW_SuburbData2022.csv")#$
   # with_column(pl$lit(0)$alias("Day"))
 
-# head(df)
-
-# Add a dummy day variable
+# Add a day variable
 
 data$Day <- "01"
 
 # tidy data, using tidyr
-
-# df_test <- df$head(20)
-# df_test
 
 tidy_data = data %>%
   select(-'Offence category') %>%
@@ -83,7 +78,7 @@ other_list <- list(c('Abduction and kidnapping', 'Arson', 'Prohibited and regula
 
 # Parsing, cleaning and wrangling of the data using polars
 
-pl_test <- pl$DataFrame(tidy_data)$
+finished_df <- pl$DataFrame(tidy_data)$
   # fill_null(0)$fill_nan(0)$
   with_columns(pl$col("period")$str$splitn(" ", 2)$alias("dtemp"))$
   with_columns(pl$col("dtemp")$struct$rename_fields(c("Month", "Year")))$unnest("dtemp")$
@@ -105,45 +100,5 @@ pl_test <- pl$DataFrame(tidy_data)$
 
 # Finish by writing the file out to disk as csv
 
-write.csv(pl_test, "outputs/nsw_test.csv")
-
-
-
-
-
-
-#===
-
-# Old dplyr code that didn't seem able to complete the task
-
-# df$with_columns((pl$col("a") * pl$col("b"))$alias("a * b"))
-  #separate(period, into = c("Month", "Year"), sep = " ") %>%
-  #mutate(ddate = paste(Year, Month, Day, sep = "-")) %>%
-  #mutate(ddate = as.Date(ddate, "%Y-%b-%d")) %>%
-  #rename(offence_cat = 'Offence category') %>%
-  #select(ddate, Year, Month, Suburb, Subcategory, count) %>%
-  #mutate(c_homicide = rowSums(across(c('Murder *', 'Attempted murder', 'Murder accessory, conspiracy', 'Manslaughter *')), na.rm = TRUE),
-         # c_assault = rowSums(across(c('Domestic violence related assault', 'Non-domestic violence related assault', 'Assault Police')), na.rm = TRUE),
-         # c_robbery = rowSums(across(c('Robbery without a weapon', 'Robbery with a firearm', 'Robbery with a weapon not a firearm')), na.rm = TRUE),
-         # c_theft = rowSums(across(c('Break and enter dwelling', 'Break and enter non-dwelling', 'Receiving or handling stolen goods', 'Motor vehicle theft',
-         #                          'Steal from motor vehicle', 'Steal from retail store', 'Steal from dwelling', 'Steal from person',
-         #                          'Stock theft', 'Fraud', 'Other theft')), na.rm = TRUE),
-         # c_sexual = rowSums(across(c('Sexual assault', 'Sexual touching, sexual act and other sexual offences')), na.rm = TRUE),
-         # c_drugs = rowSums(across(c('Possession and/or use of cocaine', 'Possession and/or use of narcotics', 'Possession and/or use of cannabis',
-         #                          'Possession and/or use of amphetamines', 'Possession and/or use of ecstasy', 'Possession and/or use of other drugs',
-         #                          'Dealing, trafficking in cocaine', 'Dealing, trafficking in narcotics', 'Dealing, trafficking in cannabis',
-         #                          'Dealing, trafficking in amphetamines', 'Dealing, trafficking in ecstasy', 'Dealing, trafficking in other drugs',
-         #                          'Cultivating cannabis', 'Manufacture drug', 'Importing drugs', 'Other drug offences')), na.rm = TRUE),
-         # c_disorderly = rowSums(across(c('Trespass', 'Offensive conduct', 'Offensive language', 'Criminal intent')), na.rm = TRUE),
-         # c_justice = rowSums(across(c('Escape custody', 'Breach Apprehended Violence Order', 'Breach bail conditions',
-         #                            'Fail to appear', 'Resist or hinder officer', 'Other offences against justice procedures')), na.rm = TRUE),
-         # c_other = rowSums(across(c('Abduction and kidnapping', 'Arson', 'Prohibited and regulated weapons offences', 'Blackmail and extortion',
-         #                            'Intimidation, stalking and harassment', 'Other offences against the person', 'Malicious damage to property',
-         #                            'Betting and gaming offences', 'Liquor offences', 'Pornography offences', 'Prostitution offences', 'Transport regulatory offences',
-         #                            'Other offences')), na.rm = TRUE),
-         # .after = Suburb)
-
-# write to csv is final step
-
-# head(tidy_data, 50)
+write.csv(finished_df, "outputs/nsw_tidy.csv")
 
