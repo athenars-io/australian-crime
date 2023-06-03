@@ -10,7 +10,7 @@
 
 # Import and load libraries
 
-packages <- c("readr", "tidyr")
+packages <- c("readr", "tidyr", "dplyr")
 
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
@@ -36,14 +36,16 @@ data <- read_csv("data/nsw/NSW_SuburbData2022.csv")
 
 # Add a day variable
 
-data$Day <- "01"
+data$Day <- "01" # need this to create the date variable / type later
 
 # tidy data, using tidyr
 
 tidy_data = data %>%
-  select(-'Offence category') %>%
+  select(-'Offence category') %>% # need / want to remove this column at this stage
   pivot_longer('Jan 1995':'Dec 2022', names_to = "period", values_to = "count") %>%
   pivot_wider(names_from = Subcategory, values_from = count)
+
+tail(tidy_data)
 
 # Saving lists of crime categories, to sum later
 
@@ -79,7 +81,8 @@ other_list <- list(c('Abduction and kidnapping', 'Arson', 'Prohibited and regula
 # Parsing, cleaning and wrangling of the data using polars
 
 finished_df <- pl$DataFrame(tidy_data)$
-  # fill_null(0)$fill_nan(0)$
+  with_columns(pl$col("*")$exclude("Offence category"))$
+  fill_null(0)$fill_nan(0)$
   with_columns(pl$col("period")$str$splitn(" ", 2)$alias("dtemp"))$
   with_columns(pl$col("dtemp")$struct$rename_fields(c("Month", "Year")))$unnest("dtemp")$
   with_columns((pl$col("Day") + pl$col("period"))$alias("Date"))$
@@ -96,7 +99,10 @@ finished_df <- pl$DataFrame(tidy_data)$
   with_columns(pl$col("*")$exclude(c("Suburb", "Day", "period", "Date", "Month", "Year"))$cast(pl$Int32)
   )$
   select(pl$col(c("Date", "Month", "Year", "Suburb")), 
-         pl$all()$exclude(c("Date", "Month", "Year", "Suburb", "period", "Day")))
+         pl$all()$exclude(c("Date", "Month", "Year", "Suburb", "period", "Day")))$
+  sort(c("Date", "Suburb"))
+
+# finished_df
 
 # Finish by writing the file out to disk as csv
 
